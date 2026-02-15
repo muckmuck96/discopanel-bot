@@ -8,7 +8,7 @@ export interface AppConfig {
     clientId: string;
   };
   encryption: {
-    key: string;
+    key: string | null;
   };
   status: {
     intervalSeconds: number;
@@ -21,7 +21,11 @@ export interface AppConfig {
   panel: {
     requestTimeoutMs: number;
     tokenRefreshBufferSeconds: number;
+    url: string | null;
+    username: string | null;
+    password: string | null;
   };
+  multiGuild: boolean;
 }
 
 const DEFAULT_CONFIG = {
@@ -81,11 +85,23 @@ export function loadConfig(): AppConfig {
 
   const discordToken = process.env['DISCORD_TOKEN'];
   const discordClientId = process.env['DISCORD_CLIENT_ID'];
-  const encryptionKey = process.env['ENCRYPTION_KEY'];
+  const encryptionKey = process.env['ENCRYPTION_KEY'] || null;
+  const multiGuild = process.env['MULTI_GUILD']?.toLowerCase() === 'true';
+
+  const panelUrl = process.env['PANEL_URL'] || null;
+  const panelUsername = process.env['PANEL_USERNAME'] || null;
+  const panelPassword = process.env['PANEL_PASSWORD'] || null;
 
   if (!discordToken) missingRequired.push('DISCORD_TOKEN');
   if (!discordClientId) missingRequired.push('DISCORD_CLIENT_ID');
-  if (!encryptionKey) missingRequired.push('ENCRYPTION_KEY');
+
+  if (multiGuild) {
+    if (!encryptionKey) missingRequired.push('ENCRYPTION_KEY');
+  } else {
+    if (!panelUrl) missingRequired.push('PANEL_URL');
+    if (!panelUsername) missingRequired.push('PANEL_USERNAME');
+    if (!panelPassword) missingRequired.push('PANEL_PASSWORD');
+  }
 
   if (missingRequired.length > 0) {
     throw new ConfigurationError(
@@ -93,7 +109,9 @@ export function loadConfig(): AppConfig {
     );
   }
 
-  validateEncryptionKey(encryptionKey!);
+  if (encryptionKey) {
+    validateEncryptionKey(encryptionKey);
+  }
 
   return {
     discord: {
@@ -101,7 +119,7 @@ export function loadConfig(): AppConfig {
       clientId: discordClientId!,
     },
     encryption: {
-      key: encryptionKey!,
+      key: encryptionKey,
     },
     status: {
       intervalSeconds: parseIntEnv('STATUS_INTERVAL', DEFAULT_CONFIG.status.intervalSeconds),
@@ -117,6 +135,10 @@ export function loadConfig(): AppConfig {
         'PANEL_TOKEN_REFRESH_BUFFER',
         DEFAULT_CONFIG.panel.tokenRefreshBufferSeconds
       ),
+      url: panelUrl,
+      username: panelUsername,
+      password: panelPassword,
     },
+    multiGuild,
   };
 }

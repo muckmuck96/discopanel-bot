@@ -22,12 +22,20 @@ export const command: BotCommand = {
     .setDMPermission(false),
 
   async execute(interaction: ChatInputCommandInteraction, ctx: CommandContext): Promise<void> {
-    const { db } = ctx;
+    const { db, config } = ctx;
     const guildId = interaction.guildId;
 
     if (!guildId) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!config.multiGuild) {
+      await interaction.reply({
+        embeds: [errorEmbed('Disabled', 'This command is disabled in single-guild mode. The panel connection is configured via environment variables.')],
         ephemeral: true,
       });
       return;

@@ -53,7 +53,7 @@ export const command: BotCommand = {
     ),
 
   async execute(interaction: ChatInputCommandInteraction, ctx: CommandContext): Promise<void> {
-    const { db } = ctx;
+    const { db, panelManager } = ctx;
     const guildId = interaction.guildId;
     const subcommand = interaction.options.getSubcommand();
 
@@ -71,6 +71,8 @@ export const command: BotCommand = {
     }
 
     try {
+      await panelManager.ensureGuildSetup(guildId);
+
       switch (subcommand) {
         case 'admin-role':
           await handleAdminRole(interaction, ctx);

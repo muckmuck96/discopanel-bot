@@ -39,6 +39,7 @@ export const command: BotCommand = {
     await interaction.deferReply({ ephemeral: true });
 
     try {
+      await panelManager.ensureGuildSetup(guildId);
       const servers = await panelManager.listServers(guildId);
 
       if (servers.length === 0) {

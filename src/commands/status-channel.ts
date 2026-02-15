@@ -25,7 +25,7 @@ export const command: BotCommand = {
     ),
 
   async execute(interaction: ChatInputCommandInteraction, ctx: CommandContext): Promise<void> {
-    const { db } = ctx;
+    const { db, panelManager, config } = ctx;
     const guildId = interaction.guildId;
 
     if (!guildId) {
@@ -46,14 +46,16 @@ export const command: BotCommand = {
     try {
       const channel = interaction.options.getChannel('channel') as TextChannel | null;
 
+      await panelManager.ensureGuildSetup(guildId);
+
       const guild = db.getGuild(guildId);
       if (!guild) {
+        const setupHint = config.multiGuild
+          ? 'Use `/setup` to connect your DiscoPanel instance first.'
+          : 'Panel connection failed. Check your environment variables.';
         await interaction.editReply({
           embeds: [
-            errorEmbed(
-              'Not Configured',
-              'Panel is not configured. Use `/setup` to connect your DiscoPanel instance first.'
-            ),
+            errorEmbed('Not Configured', setupHint),
           ],
         });
         return;

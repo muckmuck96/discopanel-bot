@@ -8,6 +8,7 @@ import type { ApiStyle } from '../types.js';
 
 export interface PanelManager {
   setup(guildId: string, panelUrl: string, username: string, password: string): Promise<AuthResult>;
+  ensureGuildSetup(guildId: string): Promise<void>;
   getConnection(guildId: string): Promise<PanelConnection>;
   listServers(guildId: string): Promise<PanelServer[]>;
   getServer(guildId: string, serverId: string): Promise<PanelServer>;
@@ -15,10 +16,15 @@ export interface PanelManager {
   stopServer(guildId: string, serverId: string): Promise<ActionResult>;
   restartServer(guildId: string, serverId: string): Promise<ActionResult>;
   disconnect(guildId: string): void;
+  isSingleGuildMode(): boolean;
 }
 
 export function createPanelManager(config: AppConfig, db: Database): PanelManager {
   const credentialCache = new Map<string, { username: string; password: string }>();
+
+  let singleGuildToken: string | null = null;
+  let singleGuildTokenExpires: number | null = null;
+  let singleGuildApiStyle: ApiStyle = 'auto';
 
   function getGuildAdapter(apiStyle: ApiStyle): PanelAdapter {
     return getAdapter(apiStyle);
@@ -30,7 +36,23 @@ export function createPanelManager(config: AppConfig, db: Database): PanelManage
     return expiresAt - now < config.panel.tokenRefreshBufferSeconds;
   }
 
+  async function refreshSingleGuildToken(): Promise<string> {
+    const result = await detectApiStyle(
+      config.panel.url!,
+      config.panel.username!,
+      config.panel.password!
+    );
+    singleGuildToken = result.token;
+    singleGuildTokenExpires = result.expiresAt;
+    singleGuildApiStyle = result.apiStyle;
+    return result.token;
+  }
+
   async function refreshToken(guildId: string): Promise<string> {
+    if (!config.multiGuild) {
+      return refreshSingleGuildToken();
+    }
+
     const guild = db.getGuild(guildId);
     if (!guild) {
       throw new PanelNotConfiguredError(guildId);
@@ -44,17 +66,45 @@ export function createPanelManager(config: AppConfig, db: Database): PanelManage
     const adapter = getGuildAdapter(guild.api_style);
     const result = await adapter.authenticate(guild.panel_url, creds.username, creds.password);
 
-    const encryptedToken = encrypt(result.token, config.encryption.key);
+    const encryptedToken = encrypt(result.token, config.encryption.key!);
     db.updateGuildToken(guildId, encryptedToken, result.expiresAt);
 
     return result.token;
   }
 
   return {
+    isSingleGuildMode(): boolean {
+      return !config.multiGuild;
+    },
+
+    async ensureGuildSetup(guildId: string): Promise<void> {
+      if (config.multiGuild) {
+        return;
+      }
+
+      const guild = db.getGuild(guildId);
+      if (guild) {
+        return;
+      }
+
+      if (!singleGuildToken || needsRefresh(singleGuildTokenExpires)) {
+        await refreshSingleGuildToken();
+      }
+
+      db.upsertGuild(
+        guildId,
+        config.panel.url!,
+        singleGuildApiStyle,
+        config.panel.username!,
+        null,
+        null
+      );
+    },
+
     async setup(guildId: string, panelUrl: string, username: string, password: string): Promise<AuthResult> {
       const normalizedUrl = panelUrl.replace(/\/+$/, '');
       const result = await detectApiStyle(normalizedUrl, username, password);
-      const encryptedToken = encrypt(result.token, config.encryption.key);
+      const encryptedToken = encrypt(result.token, config.encryption.key!);
 
       db.upsertGuild(guildId, normalizedUrl, result.apiStyle, username, encryptedToken, result.expiresAt);
       credentialCache.set(guildId, { username, password });
@@ -63,6 +113,17 @@ export function createPanelManager(config: AppConfig, db: Database): PanelManage
     },
 
     async getConnection(guildId: string): Promise<PanelConnection> {
+      if (!config.multiGuild) {
+        if (!singleGuildToken || needsRefresh(singleGuildTokenExpires)) {
+          await refreshSingleGuildToken();
+        }
+        return {
+          url: config.panel.url!,
+          token: singleGuildToken!,
+          apiStyle: singleGuildApiStyle,
+        };
+      }
+
       const guild = db.getGuild(guildId);
       if (!guild) {
         throw new PanelNotConfiguredError(guildId);
@@ -77,7 +138,7 @@ export function createPanelManager(config: AppConfig, db: Database): PanelManage
       if (needsRefresh(guild.token_expires_at)) {
         token = await refreshToken(guildId);
       } else {
-        token = decrypt(guild.encrypted_token, config.encryption.key);
+        token = decrypt(guild.encrypted_token, config.encryption.key!);
       }
 
       return {

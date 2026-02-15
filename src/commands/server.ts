@@ -100,6 +100,8 @@ export const command: BotCommand = {
     }
 
     try {
+      await panelManager.ensureGuildSetup(guildId);
+
       switch (subcommand) {
         case 'start':
           await handleStart(interaction, ctx);
