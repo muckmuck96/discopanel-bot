@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  client.once('ready', () => {
+  client.once('clientReady', () => {
     const statusUpdater = createStatusUpdater(ctx);
     statusUpdater.start();
     logger.info('Status updater started');
