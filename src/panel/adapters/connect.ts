@@ -83,6 +83,9 @@ function normalizeServer(server: ConnectServerResponse): PanelServer {
     playersOnline = 0;
   }
 
+  const diskUsage = server.diskUsage ? parseInt(server.diskUsage, 10) : null;
+  const diskTotal = server.diskTotal ? parseInt(server.diskTotal, 10) : null;
+
   return {
     id: server.id,
     name: server.name,
@@ -94,6 +97,9 @@ function normalizeServer(server: ConnectServerResponse): PanelServer {
     cpuUsage: typeof cpuUsage === 'number' ? cpuUsage : null,
     memoryUsage: memoryUsage,
     uptime: calculateUptime(server.lastStarted),
+    tps: typeof server.tps === 'number' ? server.tps : null,
+    diskUsage: typeof diskUsage === 'number' && !isNaN(diskUsage) ? diskUsage : null,
+    diskTotal: typeof diskTotal === 'number' && !isNaN(diskTotal) ? diskTotal : null,
   };
 }
 

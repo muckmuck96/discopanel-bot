@@ -28,6 +28,9 @@ export interface PanelServer {
   cpuUsage: number | null;
   memoryUsage: number | null;
   uptime: number | null;
+  tps: number | null;
+  diskUsage: number | null;
+  diskTotal: number | null;
 }
 
 export interface ConnectServerResponse {
@@ -54,6 +57,8 @@ export interface ConnectServerResponse {
   tps?: number;
   motd?: string;
   serverVersion?: string;
+  diskUsage?: string;
+  diskTotal?: string;
 }
 
 export interface RestServerResponse {

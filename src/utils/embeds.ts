@@ -62,6 +62,31 @@ export function formatMemory(usage: number | null): string {
   return `${usage.toFixed(1)}%`;
 }
 
+export function formatTps(tps: number | null): string {
+  if (tps === null) return 'N/A';
+  return tps.toFixed(1);
+}
+
+export function formatStorage(used: number | null, total: number | null): string {
+  if (used === null) return 'N/A';
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes >= 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    }
+    if (bytes >= 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  };
+
+  if (total === null) {
+    return formatBytes(used);
+  }
+
+  return `${formatBytes(used)} / ${formatBytes(total)}`;
+}
+
 export function successEmbed(title: string, description?: string): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setColor(EMBED_COLORS.success)
