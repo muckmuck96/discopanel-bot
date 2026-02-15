@@ -4,6 +4,7 @@ import {
   ButtonStyle,
   ActionRowBuilder,
   EmbedBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
   type AutocompleteInteraction,
   PermissionFlagsBits,
@@ -16,12 +17,9 @@ import {
   infoEmbed,
   getStatusIcon,
   getStatusColor,
-  formatPlayers,
-  formatCpu,
-  formatMemory,
-  formatUptime,
 } from '../utils/embeds.js';
 import { handleCommandError } from '../utils/errorHandler.js';
+import { getFields } from '../status/fieldRegistry.js';
 
 export const command: BotCommand = {
   data: new SlashCommandBuilder()
@@ -89,7 +87,7 @@ export const command: BotCommand = {
     if (!guildId) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -160,12 +158,12 @@ async function handleStart(
   if (!pinnedServer) {
     await interaction.reply({
       embeds: [errorEmbed('Not Found', 'This server is not pinned.')],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const result = await panelManager.startServer(guildId, serverId);
 
@@ -194,7 +192,7 @@ async function handleStop(
   if (!pinnedServer) {
     await interaction.reply({
       embeds: [errorEmbed('Not Found', 'This server is not pinned.')],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -219,7 +217,7 @@ async function handleStop(
       ),
     ],
     components: [row],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 
@@ -235,7 +233,7 @@ async function handleRestart(
   if (!pinnedServer) {
     await interaction.reply({
       embeds: [errorEmbed('Not Found', 'This server is not pinned.')],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -260,7 +258,7 @@ async function handleRestart(
       ),
     ],
     components: [row],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 
@@ -271,7 +269,7 @@ async function handleList(
   const guildId = interaction.guildId!;
   const { db, panelManager } = ctx;
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const pinnedServers = db.getPinnedServers(guildId);
 
@@ -321,27 +319,32 @@ async function handleInfo(
   if (!pinnedServer) {
     await interaction.reply({
       embeds: [errorEmbed('Not Found', 'This server is not pinned.')],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const server = await panelManager.getServer(guildId, serverId);
+
+  const allFields = getFields();
+  const embedFields = allFields
+    .map((field) => {
+      const value = field.extract(server);
+      if (value === null) return null;
+      return {
+        name: `${field.emoji} ${field.label}`,
+        value,
+        inline: field.inline,
+      };
+    })
+    .filter((f): f is NonNullable<typeof f> => f !== null);
 
   const embed = new EmbedBuilder()
     .setColor(getStatusColor(server.status))
     .setTitle(`${getStatusIcon(server.status)} ${server.name}`)
-    .addFields(
-      { name: 'Status', value: server.status, inline: true },
-      { name: 'Version', value: server.mcVersion ?? 'N/A', inline: true },
-      { name: 'Mod Loader', value: server.modLoader ?? 'Vanilla', inline: true },
-      { name: 'Players', value: formatPlayers(server.playersOnline, server.playersMax), inline: true },
-      { name: 'CPU', value: formatCpu(server.cpuUsage), inline: true },
-      { name: 'RAM', value: formatMemory(server.memoryUsage), inline: true },
-      { name: 'Uptime', value: server.uptime ? formatUptime(server.uptime) : 'N/A', inline: true }
-    )
+    .addFields(embedFields)
     .setTimestamp();
 
   await interaction.editReply({ embeds: [embed] });
