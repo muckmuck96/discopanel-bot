@@ -4,9 +4,11 @@ A self-hosted Discord bot for managing and monitoring your [DiscoPanel](https://
 
 ## Features
 
-- 📊 **Live Status Embeds** — Auto-updating server status in a channel of your choice (online/offline, players, CPU, RAM, uptime)
+- 📊 **Live Status Embeds** — Auto-updating server status in a channel of your choice (online/offline, players, CPU, RAM, TPS, storage, uptime)
 - 🎮 **Server Control** — Start, stop, and restart servers with slash commands
+- ⚡ **Quick Actions** — Optional buttons on status embeds for instant server control
 - 📌 **Pin Servers** — Choose which servers to monitor per Discord guild
+- ⚙️ **Configurable Fields** — Toggle which info appears in status embeds
 - 🔒 **Admin Only** — All commands restricted to admins or a configurable role
 - 🏠 **Multi-Guild** — One bot instance can serve multiple Discord servers, each connected to their own DiscoPanel
 
@@ -54,7 +56,10 @@ services:
       # - STATUS_INTERVAL=30    # Status update interval in seconds (default: 30)
       # - LOG_LEVEL=info        # debug, info, warn, error (default: info)
     volumes:
-      - ./data:/app/data  # Persistent database storage
+      - discopanel-bot-data:/app/data
+
+volumes:
+  discopanel-bot-data:
 ```
 
 ```bash
@@ -70,7 +75,7 @@ docker run -d \
   -e DISCORD_TOKEN=your_discord_bot_token \
   -e DISCORD_CLIENT_ID=your_application_client_id \
   -e ENCRYPTION_KEY=your_64_char_hex_key \
-  -v ./data:/app/data \
+  -v discopanel-bot-data:/app/data \
   ghcr.io/muckmuck96/discopanel-bot:latest
 ```
 
@@ -86,7 +91,7 @@ docker run -d \
   -e DISCORD_TOKEN=your_discord_bot_token \
   -e DISCORD_CLIENT_ID=your_application_client_id \
   -e ENCRYPTION_KEY=your_64_char_hex_key \
-  -v ./data:/app/data \
+  -v discopanel-bot-data:/app/data \
   discopanel-bot
 ```
 
@@ -113,7 +118,34 @@ Once the bot is running and invited to your server:
 | `/server info <server>` | Detailed server info | Admin |
 | `/settings admin-role <role>` | Set which role can use commands | Manage Guild |
 | `/settings status-config` | Toggle status embed fields | Admin |
+| `/settings quick-actions <on/off>` | Enable/disable quick action buttons | Admin |
 | `/settings disconnect` | Remove panel connection | Manage Guild |
+
+## Status Embed Fields
+
+The status embed can display the following information (configurable via `/settings status-config`):
+
+| Field | Description |
+|---|---|
+| Online Status | Server state with colored indicator |
+| Player Count | Current/max players online |
+| Version | Minecraft version and mod loader |
+| CPU Usage | Current CPU percentage |
+| RAM Usage | Memory consumption |
+| Uptime | Time since last server start |
+| TPS | Server ticks per second (20 = optimal) |
+| Storage | Disk usage |
+
+## Quick Actions
+
+Enable quick action buttons on status embeds with `/settings quick-actions enabled:true`.
+
+The buttons shown depend on the current server state:
+- **Server Stopped** → Start button
+- **Server Running** → Stop and Restart buttons
+- **Starting/Stopping** → No buttons (prevents spam)
+
+Buttons are disabled immediately when clicked to prevent duplicate requests.
 
 ## Environment Variables
 
@@ -127,10 +159,10 @@ Once the bot is running and invited to your server:
 
 ## Data Storage
 
-The bot stores its SQLite database in `/app/data` inside the container. Mount this as a volume to persist data across container restarts:
+The bot stores its SQLite database in `/app/data` inside the container. Use a named volume to persist data across container restarts:
 
 ```bash
--v ./data:/app/data
+-v discopanel-bot-data:/app/data
 ```
 
 ## Running without Docker
