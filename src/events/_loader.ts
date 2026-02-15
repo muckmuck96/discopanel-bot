@@ -48,14 +48,19 @@ export async function loadEvents(
     }
 
     if (interaction.isButton()) {
-      const [action, context, id] = interaction.customId.split(':');
+      const [prefix, action, id] = interaction.customId.split(':');
 
-      if (action === 'confirm' && context && id) {
-        await handleConfirmation(interaction, context, id, ctx);
+      if (prefix === 'server_action' && action && id) {
+        await handleServerAction(interaction, action, id, ctx);
         return;
       }
 
-      if (action === 'cancel') {
+      if (prefix === 'confirm' && action && id) {
+        await handleConfirmation(interaction, action, id, ctx);
+        return;
+      }
+
+      if (prefix === 'cancel') {
         await interaction.update({
           content: 'Action cancelled.',
           embeds: [],
@@ -73,6 +78,71 @@ export async function loadEvents(
     logger.info(`Removed from guild: ${guild.id}`);
     ctx.db.deleteGuild(guild.id);
   });
+}
+
+async function handleServerAction(
+  interaction: import('discord.js').ButtonInteraction,
+  action: string,
+  serverId: string,
+  ctx: CommandContext
+): Promise<void> {
+  const logger = getLogger();
+
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    await interaction.reply({
+      content: '❌ This can only be used in a server.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const disabledComponents = interaction.message.components.map((row) => ({
+    type: row.type,
+    components: row.components.map((btn) => ({
+      ...btn.data,
+      disabled: true,
+    })),
+  }));
+
+  await interaction.update({ components: disabledComponents });
+
+  try {
+    let result;
+
+    switch (action) {
+      case 'start':
+        result = await ctx.panelManager.startServer(guildId, serverId);
+        break;
+      case 'stop':
+        result = await ctx.panelManager.stopServer(guildId, serverId);
+        break;
+      case 'restart':
+        result = await ctx.panelManager.restartServer(guildId, serverId);
+        break;
+      default:
+        await interaction.followUp({ content: '❌ Unknown action.', ephemeral: true });
+        return;
+    }
+
+    if (result.success) {
+      await interaction.followUp({ content: `✅ Server ${action} request successful.`, ephemeral: true });
+      logger.info(`Server ${serverId} ${action} requested by ${interaction.user.tag} in guild ${guildId}`);
+    } else {
+      await interaction.followUp({
+        content: `❌ Failed to ${action} server: ${result.message ?? 'Unknown error'}`,
+        ephemeral: true,
+      });
+    }
+  } catch (error) {
+    logger.error(`Failed to ${action} server ${serverId}:`, error);
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    try {
+      await interaction.followUp({ content: `❌ ${message}`, ephemeral: true });
+    } catch {
+      logger.debug('Could not send error followUp');
+    }
+  }
 }
 
 async function handleConfirmation(

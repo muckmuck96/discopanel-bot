@@ -40,6 +40,15 @@ export const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 2,
+    description: 'Add quick actions setting',
+    up: (db) => {
+      db.exec(`
+        ALTER TABLE guilds ADD COLUMN quick_actions_enabled INTEGER DEFAULT 0;
+      `);
+    },
+  },
 ];
 
 export function runMigrations(db: BetterSqlite3.Database): void {

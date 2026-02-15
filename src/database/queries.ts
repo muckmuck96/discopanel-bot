@@ -11,6 +11,7 @@ export interface GuildConfig {
   status_channel_id: string | null;
   admin_role_id: string | null;
   status_fields: string;
+  quick_actions_enabled: number;
   created_at: number;
   updated_at: number;
 }
@@ -54,6 +55,9 @@ export function createQueries(db: BetterSqlite3.Database) {
     ),
     updateStatusFields: db.prepare<[string, string]>(
       'UPDATE guilds SET status_fields = ?, updated_at = unixepoch() WHERE guild_id = ?'
+    ),
+    updateQuickActions: db.prepare<[number, string]>(
+      'UPDATE guilds SET quick_actions_enabled = ?, updated_at = unixepoch() WHERE guild_id = ?'
     ),
     deleteGuild: db.prepare<[string]>('DELETE FROM guilds WHERE guild_id = ?'),
     getAllGuilds: db.prepare<[], GuildConfig>('SELECT * FROM guilds'),
@@ -120,6 +124,10 @@ export function createQueries(db: BetterSqlite3.Database) {
 
     updateStatusFields(guildId: string, fields: Record<string, boolean>): void {
       statements.updateStatusFields.run(JSON.stringify(fields), guildId);
+    },
+
+    updateQuickActions(guildId: string, enabled: boolean): void {
+      statements.updateQuickActions.run(enabled ? 1 : 0, guildId);
     },
 
     deleteGuild(guildId: string): void {

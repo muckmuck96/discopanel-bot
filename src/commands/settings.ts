@@ -37,6 +37,17 @@ export const command: BotCommand = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName('quick-actions')
+        .setDescription('Enable or disable quick action buttons on status embeds')
+        .addBooleanOption((option) =>
+          option
+            .setName('enabled')
+            .setDescription('Enable quick action buttons')
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName('disconnect')
         .setDescription('Remove panel connection and all data for this server')
     ),
@@ -66,6 +77,9 @@ export const command: BotCommand = {
           break;
         case 'status-config':
           await handleStatusConfig(interaction, ctx);
+          break;
+        case 'quick-actions':
+          await handleQuickActions(interaction, ctx);
           break;
         case 'disconnect':
           await handleDisconnect(interaction, ctx);
@@ -217,6 +231,43 @@ async function handleStatusConfig(
       components: [],
     });
   }
+}
+
+async function handleQuickActions(
+  interaction: ChatInputCommandInteraction,
+  ctx: CommandContext
+): Promise<void> {
+  const guildId = interaction.guildId!;
+  const { db } = ctx;
+
+  const guild = db.getGuild(guildId);
+  if (!guild) {
+    await interaction.reply({
+      embeds: [
+        errorEmbed(
+          'Not Configured',
+          'Panel is not configured. Use `/setup` to connect your DiscoPanel instance first.'
+        ),
+      ],
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const enabled = interaction.options.getBoolean('enabled', true);
+  db.updateQuickActions(guildId, enabled);
+
+  await interaction.reply({
+    embeds: [
+      successEmbed(
+        'Quick Actions Updated',
+        enabled
+          ? 'Quick action buttons are now **enabled** on status embeds.'
+          : 'Quick action buttons are now **disabled** on status embeds.'
+      ),
+    ],
+    ephemeral: true,
+  });
 }
 
 async function handleDisconnect(

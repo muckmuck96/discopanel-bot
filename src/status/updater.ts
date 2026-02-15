@@ -1,10 +1,11 @@
-import type { TextChannel, APIEmbedField } from 'discord.js';
+import type { TextChannel, APIEmbedField, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import type { CommandContext } from '../types.js';
 import type { PanelServer } from '../panel/types.js';
 import { getEnabledFields } from './fieldRegistry.js';
 import { serverStatusEmbed, unreachableEmbed, serverRemovedEmbed } from '../utils/embeds.js';
 import { getLogger } from '../utils/logger.js';
 import { ServerNotFoundError } from '../errors.js';
+import { createActionButtons } from '../utils/actionButtons.js';
 
 export interface StatusUpdater {
   start(): void;
@@ -42,7 +43,8 @@ export function createStatusUpdater(ctx: CommandContext): StatusUpdater {
     serverName: string,
     statusMessageId: string | null,
     statusChannelId: string,
-    statusFields: Record<string, boolean>
+    statusFields: Record<string, boolean>,
+    quickActionsEnabled: boolean
   ): Promise<void> {
     try {
       const channel = await client.channels.fetch(statusChannelId);
@@ -56,11 +58,16 @@ export function createStatusUpdater(ctx: CommandContext): StatusUpdater {
       let server: PanelServer | null = null;
       let embed;
       let serverRemoved = false;
+      let actionRow: ActionRowBuilder<ButtonBuilder> | null = null;
 
       try {
         server = await panelManager.getServer(guildId, serverId);
         const fields = buildFields(server, statusFields);
         embed = serverStatusEmbed(server, fields, config.status.intervalSeconds);
+
+        if (quickActionsEnabled) {
+          actionRow = createActionButtons(serverId, server.status);
+        }
       } catch (error) {
         if (error instanceof ServerNotFoundError) {
           serverRemoved = true;
@@ -72,10 +79,15 @@ export function createStatusUpdater(ctx: CommandContext): StatusUpdater {
         }
       }
 
+      const messagePayload = {
+        embeds: [embed],
+        components: actionRow ? [actionRow] : [],
+      };
+
       if (statusMessageId) {
         try {
           const message = await textChannel.messages.fetch(statusMessageId);
-          await message.edit({ embeds: [embed] });
+          await message.edit(messagePayload);
 
           if (serverRemoved) {
             setTimeout(async () => {
@@ -96,7 +108,7 @@ export function createStatusUpdater(ctx: CommandContext): StatusUpdater {
         return;
       }
 
-      const newMessage = await textChannel.send({ embeds: [embed] });
+      const newMessage = await textChannel.send(messagePayload);
       db.updateStatusMessageId(guildId, serverId, newMessage.id);
     } catch (error) {
       logger.error(`Failed to update status for server ${serverId} in guild ${guildId}:`, error);
@@ -111,6 +123,7 @@ export function createStatusUpdater(ctx: CommandContext): StatusUpdater {
 
     const pinnedServers = db.getPinnedServers(guildId);
     const statusFields = db.parseStatusFields(guild.status_fields);
+    const quickActionsEnabled = guild.quick_actions_enabled === 1;
 
     for (const server of pinnedServers) {
       await updateServer(
@@ -119,7 +132,8 @@ export function createStatusUpdater(ctx: CommandContext): StatusUpdater {
         server.server_name,
         server.status_message_id,
         guild.status_channel_id,
-        statusFields
+        statusFields,
+        quickActionsEnabled
       );
     }
   }
