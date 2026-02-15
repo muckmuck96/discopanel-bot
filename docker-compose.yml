@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  discopanel-bot:
+    build: .
+    container_name: discopanel-discord-bot
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - STATUS_INTERVAL=${STATUS_INTERVAL:-30}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - PANEL_REQUEST_TIMEOUT=${PANEL_REQUEST_TIMEOUT:-10000}
+      - PANEL_TOKEN_REFRESH_BUFFER=${PANEL_TOKEN_REFRESH_BUFFER:-300}
+      - STATUS_MAX_RETRIES=${STATUS_MAX_RETRIES:-3}
+      - STATUS_RETRY_DELAY=${STATUS_RETRY_DELAY:-5000}
+    volumes:
+      - bot-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  bot-data:
