@@ -1,5 +1,5 @@
 import type { Client, Interaction } from 'discord.js';
-import { Events } from 'discord.js';
+import { Events, MessageFlags } from 'discord.js';
 import type { BotCommand, CommandContext } from '../types.js';
 import { handleCommandError } from '../utils/errorHandler.js';
 import { getLogger } from '../utils/logger.js';
@@ -92,7 +92,7 @@ async function handleServerAction(
   if (!guildId) {
     await interaction.reply({
       content: '❌ This can only be used in a server.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -121,24 +121,24 @@ async function handleServerAction(
         result = await ctx.panelManager.restartServer(guildId, serverId);
         break;
       default:
-        await interaction.followUp({ content: '❌ Unknown action.', ephemeral: true });
+        await interaction.followUp({ content: '❌ Unknown action.', flags: MessageFlags.Ephemeral });
         return;
     }
 
     if (result.success) {
-      await interaction.followUp({ content: `✅ Server ${action} request successful.`, ephemeral: true });
+      await interaction.followUp({ content: `✅ Server ${action} request successful.`, flags: MessageFlags.Ephemeral });
       logger.info(`Server ${serverId} ${action} requested by ${interaction.user.tag} in guild ${guildId}`);
     } else {
       await interaction.followUp({
         content: `❌ Failed to ${action} server: ${result.message ?? 'Unknown error'}`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } catch (error) {
     logger.error(`Failed to ${action} server ${serverId}:`, error);
     const message = error instanceof Error ? error.message : 'An unexpected error occurred';
     try {
-      await interaction.followUp({ content: `❌ ${message}`, ephemeral: true });
+      await interaction.followUp({ content: `❌ ${message}`, flags: MessageFlags.Ephemeral });
     } catch {
       logger.debug('Could not send error followUp');
     }

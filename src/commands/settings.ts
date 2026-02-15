@@ -4,6 +4,7 @@ import {
   StringSelectMenuOptionBuilder,
   ActionRowBuilder,
   ComponentType,
+  MessageFlags,
   type ChatInputCommandInteraction,
   PermissionFlagsBits,
 } from 'discord.js';
@@ -60,7 +61,7 @@ export const command: BotCommand = {
     if (!guildId) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -111,7 +112,7 @@ async function handleAdminRole(
           'Panel is not configured. Use `/setup` to connect your DiscoPanel instance first.'
         ),
       ],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -126,7 +127,7 @@ async function handleAdminRole(
           `Members with the ${role} role can now use bot commands.`
         ),
       ],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   } else {
     await interaction.reply({
@@ -136,7 +137,7 @@ async function handleAdminRole(
           'Only members with **Manage Server** permission can use bot commands now.'
         ),
       ],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 }
@@ -157,7 +158,7 @@ async function handleStatusConfig(
           'Panel is not configured. Use `/setup` to connect your DiscoPanel instance first.'
         ),
       ],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -196,7 +197,7 @@ async function handleStatusConfig(
       ),
     ],
     components: [row],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 
   try {
@@ -251,7 +252,7 @@ async function handleQuickActions(
           'Panel is not configured. Use `/setup` to connect your DiscoPanel instance first.'
         ),
       ],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -268,7 +269,7 @@ async function handleQuickActions(
           : 'Quick action buttons are now **disabled** on status embeds.'
       ),
     ],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 
@@ -288,7 +289,7 @@ async function handleDisconnect(
           'This server is not connected to any DiscoPanel instance.'
         ),
       ],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -306,7 +307,7 @@ async function handleDisconnect(
           'Type `/setup` to reconnect later.'
       ),
     ],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 
   panelManager.disconnect(guildId);
@@ -318,6 +319,6 @@ async function handleDisconnect(
         'Successfully disconnected from DiscoPanel. All data has been removed.'
       ),
     ],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }

@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, MessageComponentInteraction } from 'discord.js';
+import { MessageFlags, type ChatInputCommandInteraction, type MessageComponentInteraction } from 'discord.js';
 import {
   PanelConnectionError,
   PanelAuthError,
@@ -79,7 +79,7 @@ export async function handleCommandError(
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ embeds: [embed] });
     } else {
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
   } catch (replyError) {
     logger.error('Failed to send error response:', replyError);
@@ -102,7 +102,7 @@ export async function handleComponentError(
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ embeds: [embed], components: [] });
     } else {
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
   } catch (replyError) {
     logger.error('Failed to send error response:', replyError);

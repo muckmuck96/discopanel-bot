@@ -4,6 +4,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
   type ModalSubmitInteraction,
   PermissionFlagsBits,
@@ -28,7 +29,7 @@ export const command: BotCommand = {
     if (!guildId) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -36,7 +37,7 @@ export const command: BotCommand = {
     if (!config.multiGuild) {
       await interaction.reply({
         embeds: [errorEmbed('Disabled', 'This command is disabled in single-guild mode. The panel connection is configured via environment variables.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -89,7 +90,7 @@ export const command: BotCommand = {
       return;
     }
 
-    await modalInteraction.deferReply({ ephemeral: true });
+    await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       const panelUrl = modalInteraction.fields.getTextInputValue('panel_url');

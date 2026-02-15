@@ -4,6 +4,7 @@ import {
   StringSelectMenuOptionBuilder,
   ActionRowBuilder,
   ComponentType,
+  MessageFlags,
   type ChatInputCommandInteraction,
   PermissionFlagsBits,
 } from 'discord.js';
@@ -26,7 +27,7 @@ export const command: BotCommand = {
     if (!guildId) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -36,7 +37,7 @@ export const command: BotCommand = {
       requireAdminPermission(member, guildId, db);
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       await panelManager.ensureGuildSetup(guildId);

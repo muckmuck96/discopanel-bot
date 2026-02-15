@@ -1,6 +1,7 @@
 import {
   SlashCommandBuilder,
   ChannelType,
+  MessageFlags,
   type ChatInputCommandInteraction,
   type TextChannel,
   PermissionFlagsBits,
@@ -31,7 +32,7 @@ export const command: BotCommand = {
     if (!guildId) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -41,7 +42,7 @@ export const command: BotCommand = {
       requireAdminPermission(member, guildId, db);
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       const channel = interaction.options.getChannel('channel') as TextChannel | null;
